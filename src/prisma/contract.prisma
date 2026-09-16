@@ -1,0 +1,117 @@
+// use prisma-8
+model User {
+  id            String               @id @default(uuid())
+  name          String?
+  email         String               @unique
+  password      String
+  avatar        String?
+  createdAt     DateTime             @default(now())
+  updatedAt     temporal.updatedAt()
+
+  videos        Video[]
+  likes         Like[]
+  comments      Comment[]
+  subscriptions Subscription[]       @relation("UserSubscriptions")
+  subscribers   Subscription[]       @relation("ChannelSubscribers")
+  watchHistory  WatchHistory[]
+  watchLater    WatchLater[]
+}
+
+model Video {
+  id           String               @id @default(uuid())
+  title        String
+  description  String?
+  thumbnail    String?
+  videoUrl     String?
+  category     String?
+  views        Int                  @default(0)
+  createdAt    DateTime             @default(now())
+  updatedAt   temporal.updatedAt()
+
+  uploader     User                 @relation(fields:[uploaderId], references:[id])
+  uploaderId   String
+
+  frames       VideoFrame[]
+  likes        Like[]
+  comments     Comment[]
+  watchHistory WatchHistory[]
+  watchLater   WatchLater[]
+}
+
+model VideoFrame {
+  id        String   @id @default(uuid())
+  imageUrl  String
+  order     Int
+  duration  Int      @default(2)
+  createdAt temporal.createdAtString()
+
+  video     Video    @relation(fields:[videoId], references:[id], onDelete: Cascade)
+  videoId   String
+
+  @@unique([videoId, order])
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  createdAt temporal.createdAtString()
+
+  user      User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  userId    String
+
+  video     Video    @relation(fields:[videoId], references:[id], onDelete: Cascade)
+  videoId   String
+
+  @@unique([userId, videoId])
+}
+
+model Comment {
+  id        String               @id @default(uuid())
+  text      String
+  createdAt DateTime             @default(now())
+  updatedAt temporal.updatedAtString()
+
+  user      User                 @relation(fields:[userId], references:[id], onDelete: Cascade)
+  userId    String
+
+  video     Video                @relation(fields:[videoId], references:[id], onDelete: Cascade)
+  videoId   String
+}
+
+model Subscription {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+
+  subscriber   User     @relation("UserSubscriptions", fields:[subscriberId], references:[id], onDelete: Cascade)
+  subscriberId String
+
+  channel      User     @relation("ChannelSubscribers", fields:[channelId], references:[id], onDelete: Cascade)
+  channelId    String
+
+  @@unique([subscriberId, channelId])
+}
+
+model WatchHistory {
+  id        String   @id @default(uuid())
+  watchedAt DateTime @default(now())
+
+  user      User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  userId    String
+
+  video     Video    @relation(fields:[videoId], references:[id], onDelete: Cascade)
+  videoId   String
+
+  @@unique([userId, videoId])
+}
+
+model WatchLater {
+  id        String   @id @default(uuid())
+  createdAt temporal.createdAtString()
+
+  user      User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  userId    String
+
+  video     Video    @relation(fields:[videoId], references:[id], onDelete: Cascade)
+  videoId   String
+
+  @@unique([userId, videoId])
+}

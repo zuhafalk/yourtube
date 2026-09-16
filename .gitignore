@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+node_modules/
+dist/
+.env
+
+# local AI/editor tooling
+/.agents/
+/.claude/
+/.cursor/
+/.devin/
+
+# uploaded video files
+/public/uploads/videos/
