@@ -22,6 +22,7 @@ export async function POST(
       );
     }
 
+    // Check whether the video exists
     const video = await db.orm.public.Video
       .where({ id })
       .first();
@@ -36,20 +37,23 @@ export async function POST(
       );
     }
 
-    const existingHistory =
-      await db.orm.public.WatchHistory
-        .where({
-          userId,
-          videoId: id,
-        })
-        .first();
+    // Check if this video is already in the user's watch history
+    const existingHistory = await db.orm.public.WatchHistory
+      .where({
+        userId,
+        videoId: id,
+      })
+      .first();
 
+    // Do not create a duplicate record
     if (existingHistory) {
-      await db.orm.public.WatchHistory
-        .where({ id: existingHistory.id })
-        .delete();
+      return NextResponse.json({
+        success: true,
+        message: "Video already exists in watch history",
+      });
     }
 
+    // Create history record
     await db.orm.public.WatchHistory.create({
       userId,
       videoId: id,

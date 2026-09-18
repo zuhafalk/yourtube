@@ -11,6 +11,8 @@ import {
   Check,
   Send,
   Play,
+  Pause,
+  RotateCcw,
   Bell,
 } from "lucide-react";
 
@@ -36,6 +38,18 @@ type Comment = {
   createdAt: string;
   userId: string;
 };
+
+const FRAME_DURATION = 1000;
+
+const VIDEO_FRAMES = [
+  "/uploads/frames/ai-frame-1.png",
+  "/uploads/frames/ai-frame-2.png",
+  "/uploads/frames/ai-frame-3.png",
+  "/uploads/frames/ai-frame-4.png",
+  "/uploads/frames/ai-frame-5.png",
+  "/uploads/frames/ai-frame-6.png",
+  "/uploads/frames/ai-frame-7.png",
+];
 
 export default function WatchPage() {
   return (
@@ -82,6 +96,10 @@ function WatchContent() {
 
   const [error, setError] = useState("");
 
+  // Frame video player
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
   // Load video
   useEffect(() => {
     if (!videoId || videoId === "undefined") {
@@ -112,6 +130,7 @@ function WatchContent() {
         }
 
         setVideo(data.video);
+
         setLikeCount(
           Number(data.video.likes ?? 0)
         );
@@ -183,6 +202,7 @@ function WatchContent() {
 
         if (response.ok && data.success) {
           setLiked(Boolean(data.liked));
+
           setLikeCount(
             Number(data.likeCount ?? 0)
           );
@@ -230,7 +250,10 @@ function WatchContent() {
   useEffect(() => {
     const uploaderId = video?.uploaderId;
 
-    if (!uploaderId || uploaderId === "undefined") {
+    if (
+      !uploaderId ||
+      uploaderId === "undefined"
+    ) {
       return;
     }
 
@@ -262,6 +285,58 @@ function WatchContent() {
     loadSubscriptionStatus();
   }, [video?.uploaderId]);
 
+  // Frame player
+  useEffect(() => {
+    if (!isPlaying) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setCurrentFrame((previousFrame) => {
+        if (
+          previousFrame >=
+          VIDEO_FRAMES.length - 1
+        ) {
+          return 0;
+        }
+
+        return previousFrame + 1;
+      });
+    }, FRAME_DURATION);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [isPlaying]);
+
+  // Preload all frame images
+  useEffect(() => {
+    VIDEO_FRAMES.forEach((frame) => {
+      const image = new Image();
+      image.src = frame;
+    });
+  }, []);
+
+  // Play frame video
+  async function handleFramePlay() {
+    if (!viewCounted) {
+      await handleVideoPlay();
+    }
+
+    setIsPlaying(true);
+  }
+
+  // Pause frame video
+  function handleFramePause() {
+    setIsPlaying(false);
+  }
+
+  // Restart frame video
+  function handleFrameRestart() {
+    setCurrentFrame(0);
+    setIsPlaying(true);
+  }
+
   // Like / unlike
   async function handleLike() {
     if (!videoId || videoId === "undefined") {
@@ -280,6 +355,7 @@ function WatchContent() {
 
       if (response.ok && data.success) {
         setLiked(Boolean(data.liked));
+
         setLikeCount(
           Number(data.likeCount ?? 0)
         );
@@ -340,7 +416,9 @@ function WatchContent() {
         error
       );
 
-      alert("Failed to update subscription");
+      alert(
+        "Failed to update subscription"
+      );
     } finally {
       setSubscribeLoading(false);
     }
@@ -552,7 +630,7 @@ function WatchContent() {
     }
   }
 
-  // Count one view when video starts playing
+  // Count one view and save history
   async function handleVideoPlay() {
     if (
       !videoId ||
@@ -614,11 +692,15 @@ function WatchContent() {
     const count = Number(views ?? 0);
 
     if (count >= 1000000) {
-      return `${(count / 1000000).toFixed(1)}M views`;
+      return `${(
+        count / 1000000
+      ).toFixed(1)}M views`;
     }
 
     if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}K views`;
+      return `${(
+        count / 1000
+      ).toFixed(1)}K views`;
     }
 
     return `${count} views`;
@@ -660,50 +742,112 @@ function WatchContent() {
     );
   }
 
+  const progress =
+    ((currentFrame + 1) /
+      VIDEO_FRAMES.length) *
+    100;
+
+  const currentSecond = currentFrame + 1;
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-8">
 
-        {/* Video Player */}
-        <div className="bg-black rounded-xl overflow-hidden">
-          {video.videoUrl ? (
-            <video
-              key={video.videoUrl}
-              controls
-              className="w-full max-h-[650px]"
-              poster={
-                video.thumbnail || undefined
-              }
-              onPlay={handleVideoPlay}
-            >
-              <source
-                src={video.videoUrl}
-                type="video/mp4"
+        {/* Frame Video Player */}
+        <div className="bg-black rounded-xl overflow-hidden shadow-sm">
+
+          <div className="relative aspect-video flex items-center justify-center bg-black">
+
+            <img
+              key={VIDEO_FRAMES[currentFrame]}
+              src={VIDEO_FRAMES[currentFrame]}
+              alt={`Video frame ${
+                currentFrame + 1
+              }`}
+              className="w-full h-full object-contain"
+            />
+
+            {!isPlaying && (
+              <button
+                type="button"
+                onClick={handleFramePlay}
+                className="absolute inset-0 flex items-center justify-center bg-black/20 group"
+                aria-label="Play video"
+              >
+                <span className="w-16 h-16 rounded-full bg-white/95 flex items-center justify-center shadow-lg transition group-hover:scale-105">
+                  <Play className="w-7 h-7 text-black ml-1" />
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* Player Controls */}
+          <div className="px-4 py-3 bg-black text-white">
+
+            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden mb-3">
+              <div
+                className="h-full bg-white transition-all duration-300"
+                style={{
+                  width: `${progress}%`,
+                }}
               />
-
-              Your browser does not support video
-              playback.
-            </video>
-          ) : (
-            <div className="aspect-video flex items-center justify-center text-white">
-              <div className="text-center">
-                <Play className="w-12 h-12 mx-auto mb-3" />
-
-                <p>
-                  Video is not available
-                </p>
-              </div>
             </div>
-          )}
+
+            <div className="flex items-center justify-between">
+
+              <div className="flex items-center gap-3">
+
+                {isPlaying ? (
+                  <button
+                    type="button"
+                    onClick={handleFramePause}
+                    className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-800 transition"
+                    aria-label="Pause video"
+                  >
+                    <Pause className="w-5 h-5" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleFramePlay}
+                    className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-800 transition"
+                    aria-label="Play video"
+                  >
+                    <Play className="w-5 h-5 ml-0.5" />
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleFrameRestart}
+                  className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-800 transition"
+                  aria-label="Restart video"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </button>
+
+                <span className="text-sm text-gray-300">
+                  {currentSecond}s /{" "}
+                  {VIDEO_FRAMES.length}s
+                </span>
+              </div>
+
+              <span className="text-xs text-gray-400">
+                Frame video
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Video Information */}
         <div className="mt-5">
+
           <h1 className="text-2xl font-bold text-gray-900">
             {video.title}
           </h1>
 
           <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-500">
+
             <span>
               {formatViews(video.views)}
             </span>
@@ -711,14 +855,18 @@ function WatchContent() {
             {video.category && (
               <>
                 <span>•</span>
-                <span>{video.category}</span>
+                <span>
+                  {video.category}
+                </span>
               </>
             )}
           </div>
 
           {/* Channel / Subscribe */}
           <div className="flex flex-wrap items-center gap-4 mt-5">
+
             <div className="flex items-center gap-3">
+
               <div className="w-11 h-11 rounded-full bg-gray-900 text-white flex items-center justify-center font-semibold">
                 {(
                   video.uploader?.name ||
@@ -818,7 +966,6 @@ function WatchContent() {
               className="flex items-center gap-2 px-4 py-2 rounded-full border bg-white text-gray-700 border-gray-300 hover:bg-gray-100 transition"
             >
               <Share2 className="w-4 h-4" />
-
               Share
             </button>
 
@@ -848,7 +995,9 @@ function WatchContent() {
 
           {/* Comments */}
           <section className="mt-8">
+
             <div className="flex items-center gap-2 mb-5">
+
               <MessageCircle className="w-5 h-5" />
 
               <h2 className="text-xl font-semibold">
@@ -894,6 +1043,7 @@ function WatchContent() {
               </p>
             ) : comments.length === 0 ? (
               <div className="bg-white border rounded-xl p-6 text-center">
+
                 <MessageCircle className="w-8 h-8 mx-auto text-gray-400 mb-2" />
 
                 <p className="text-gray-500">
@@ -903,12 +1053,14 @@ function WatchContent() {
               </div>
             ) : (
               <div className="space-y-4">
+
                 {comments.map((comment) => (
                   <div
                     key={comment.id}
                     className="bg-white border rounded-xl p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
+
                       <div>
                         <p className="text-sm text-gray-500">
                           User

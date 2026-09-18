@@ -16,3 +16,4 @@ export const db = postgres<Contract>({
   contractJson,
   url: connectionString,
 });
+
