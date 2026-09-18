@@ -42,7 +42,7 @@ export default function UploadPage() {
         )}`,
         file,
         {
-          access: "public",
+          access: "private",
           handleUploadUrl: "/api/upload",
           multipart: true,
           onUploadProgress(progress) {
