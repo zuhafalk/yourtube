@@ -1,63 +1,40 @@
+import { handleUpload } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import path from "path";
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const formData = await request.formData();
-    const file = formData.get("file");
+    const body = await request.json();
 
-    if (!(file instanceof File)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "No video file provided",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!file.type.startsWith("video/")) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Only video files are allowed",
-        },
-        { status: 400 }
-      );
-    }
-
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-
-    const uploadDirectory = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      "videos"
-    );
-
-    const filePath = path.join(uploadDirectory, fileName);
-
-    await writeFile(filePath, buffer);
-
-    const videoUrl = `/uploads/videos/${fileName}`;
-
-    return NextResponse.json({
-      success: true,
-      videoUrl,
-      fileName,
-      message: "Video uploaded successfully",
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async () => {
+        return {
+          allowedContentTypes: [
+            "video/mp4",
+            "video/webm",
+            "video/quicktime",
+            "video/x-msvideo",
+            "video/mpeg",
+            "video/ogg",
+          ],
+          maximumSizeInBytes: 1024 * 1024 * 1024,
+          addRandomSuffix: true,
+        };
+      },
+      onUploadCompleted: async ({ blob }) => {
+        console.log("Video uploaded successfully:", blob.url);
+      },
     });
+
+    return NextResponse.json(jsonResponse);
   } catch (error) {
-    console.error("Video upload error:", error);
+    console.error("Vercel Blob upload error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to upload video",
+        message: "Failed to initialize video upload",
       },
       { status: 500 }
     );
