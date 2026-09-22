@@ -26,29 +26,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const oidcToken = process.env.VERCEL_OIDC_TOKEN;
-    const storeId =
-      process.env.BLOB_STORE_ID ||
-      process.env.videos_STORE_ID;
-
-    if (!oidcToken) {
-      throw new Error(
-        "VERCEL_OIDC_TOKEN is not available."
-      );
-    }
-
-    if (!storeId) {
-      throw new Error(
-        "Blob store ID is not available."
-      );
-    }
-
     console.log("Starting Vercel Blob upload...");
     console.log("File:", file.name);
     console.log("Size:", file.size);
     console.log("Type:", file.type);
-    console.log("OIDC available:", Boolean(oidcToken));
-    console.log("Store ID available:", Boolean(storeId));
 
     const safeFileName = file.name.replace(
       /[^a-zA-Z0-9.-]/g,
@@ -61,8 +42,6 @@ export async function POST(request: Request) {
       {
         access: "public",
         multipart: true,
-        oidcToken,
-        storeId,
       }
     );
 
