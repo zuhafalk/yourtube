@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       {
         access: "public",
         multipart: true,
+        token: process.env.BLOB_READ_WRITE_TOKEN,
       }
     );
 
