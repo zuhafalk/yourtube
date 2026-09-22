@@ -51,3 +51,6 @@ dist/
 
 # uploaded video files
 /public/uploads/videos/
+
+.vercel
+.env*
