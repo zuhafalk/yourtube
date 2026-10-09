@@ -17,6 +17,7 @@ import {
   Play,
   LogOut,
   User,
+  Video,
 } from "lucide-react";
 
 type Video = {
@@ -161,9 +162,7 @@ export default function HomePage() {
 
   const userName = user?.name || "User";
 
-  const userInitial = userName
-    .charAt(0)
-    .toUpperCase();
+  const userInitial = userName.charAt(0).toUpperCase();
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -198,9 +197,7 @@ export default function HomePage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) =>
-                setSearchQuery(e.target.value)
-              }
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search"
               className="flex-1 h-10 px-5 border border-gray-300 rounded-l-full outline-none focus:border-blue-500 bg-white"
             />
@@ -217,6 +214,23 @@ export default function HomePage() {
 
         {/* Right side */}
         <div className="flex items-center gap-1 sm:gap-2">
+          {/* Meetings */}
+          <Link
+            href="/call"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-black text-white font-semibold hover:bg-gray-800 transition"
+          >
+            <Video size={18} />
+            Meetings
+          </Link>
+
+          <Link
+            href="/call"
+            className="sm:hidden p-2 rounded-full hover:bg-gray-100"
+            aria-label="Meetings"
+          >
+            <Video size={22} />
+          </Link>
+
           {/* Upload */}
           <Link
             href="/upload"
@@ -256,7 +270,6 @@ export default function HomePage() {
                 className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-100 transition"
                 aria-label="Account"
               >
-                {/* Avatar */}
                 {user.avatar ? (
                   <img
                     src={user.avatar}
@@ -269,16 +282,13 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {/* Name */}
                 <span className="hidden lg:block font-medium max-w-32 truncate">
                   {userName}
                 </span>
               </button>
 
-              {/* Account dropdown */}
               {showAccountMenu && (
                 <div className="absolute right-0 top-12 w-72 bg-white border rounded-xl shadow-lg overflow-hidden">
-                  {/* User information */}
                   <div className="p-4 border-b">
                     <div className="flex items-center gap-3">
                       {user.avatar ? (
@@ -305,7 +315,6 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Profile */}
                   <Link
                     href="/profile"
                     onClick={() =>
@@ -317,7 +326,6 @@ export default function HomePage() {
                     <span>My account</span>
                   </Link>
 
-                  {/* Logout */}
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -336,7 +344,6 @@ export default function HomePage() {
               )}
             </div>
           ) : (
-            /* Login when not authenticated */
             <Link
               href="/login"
               className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100"
@@ -356,7 +363,6 @@ export default function HomePage() {
         {/* ================= SIDEBAR ================= */}
         <aside className="hidden md:block fixed left-0 top-16 bottom-0 w-60 bg-white border-r p-4">
           <nav className="space-y-2">
-            {/* HOME */}
             <Link
               href="/"
               className="w-full flex items-center gap-4 px-4 py-3 rounded-lg bg-gray-100 font-medium"
@@ -365,7 +371,6 @@ export default function HomePage() {
               Home
             </Link>
 
-            {/* SHORTS */}
             <Link
               href="/shorts"
               className="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-gray-100"
@@ -374,7 +379,6 @@ export default function HomePage() {
               Shorts
             </Link>
 
-            {/* SUBSCRIPTIONS */}
             <Link
               href="/subscriptions"
               className="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-gray-100"
@@ -385,7 +389,6 @@ export default function HomePage() {
 
             <hr className="my-4" />
 
-            {/* LIBRARY */}
             <Link
               href="/library"
               className="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-gray-100"
@@ -394,7 +397,6 @@ export default function HomePage() {
               Library
             </Link>
 
-            {/* HISTORY */}
             <Link
               href="/history"
               className="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-gray-100"
@@ -403,7 +405,6 @@ export default function HomePage() {
               History
             </Link>
 
-            {/* WATCH LATER */}
             <Link
               href="/watch-later"
               className="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-gray-100"
@@ -413,6 +414,15 @@ export default function HomePage() {
             </Link>
 
             <hr className="my-4" />
+
+            {/* MEETINGS */}
+            <Link
+              href="/call"
+              className="w-full flex items-center gap-4 px-4 py-3 rounded-lg bg-black text-white hover:bg-gray-800 font-medium"
+            >
+              <Video size={21} />
+              Meetings
+            </Link>
 
             {/* UPLOAD */}
             <Link
@@ -447,7 +457,7 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Heading + Upload */}
+          {/* Heading + Actions */}
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-2xl font-bold">
@@ -459,14 +469,35 @@ export default function HomePage() {
               </p>
             </div>
 
-            <Link
-              href="/upload"
-              className="hidden sm:flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold hover:bg-red-700 transition"
-            >
-              <Upload size={18} />
-              Upload Video
-            </Link>
+            <div className="flex items-center gap-3">
+              {/* Meetings */}
+              <Link
+                href="/call"
+                className="hidden sm:flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-full font-semibold hover:bg-gray-800 transition"
+              >
+                <Video size={18} />
+                Join / Create Meeting
+              </Link>
+
+              {/* Upload */}
+              <Link
+                href="/upload"
+                className="hidden lg:flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold hover:bg-red-700 transition"
+              >
+                <Upload size={18} />
+                Upload Video
+              </Link>
+            </div>
           </div>
+
+          {/* Mobile meeting button */}
+          <Link
+            href="/call"
+            className="sm:hidden mb-6 w-full flex items-center justify-center gap-2 bg-black text-white px-5 py-3 rounded-xl font-semibold"
+          >
+            <Video size={18} />
+            Join / Create Meeting
+          </Link>
 
           {/* ================= LOADING ================= */}
           {loading ? (
@@ -516,7 +547,6 @@ export default function HomePage() {
                       </div>
                     )}
 
-                    {/* Play overlay */}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
                       <div className="opacity-0 group-hover:opacity-100 transition bg-black/70 text-white rounded-full p-3">
                         <Play
@@ -529,14 +559,12 @@ export default function HomePage() {
 
                   {/* Video details */}
                   <div className="flex gap-3 mt-3">
-                    {/* Avatar */}
                     <div className="w-9 h-9 shrink-0 rounded-full bg-gray-300 flex items-center justify-center font-bold">
                       {(video.uploader?.name || "U")
                         .charAt(0)
                         .toUpperCase()}
                     </div>
 
-                    {/* Text */}
                     <div className="min-w-0">
                       <h3 className="font-semibold leading-5 line-clamp-2">
                         {video.title}

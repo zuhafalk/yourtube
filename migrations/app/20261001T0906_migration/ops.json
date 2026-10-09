@@ -1,0 +1,449 @@
+[
+  {
+    "id": "dropConstraint.comment.comment_userId_videoId_key",
+    "label": "Drop constraint \"comment_userId_videoId_key\" on \"comment\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "comment_userId_videoId_key",
+        "table": "comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"comment_userId_videoId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "comment_userId_videoId_key",
+          "public",
+          "\"public\".\"comment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop constraint \"comment_userId_videoId_key\"",
+        "sql": "ALTER TABLE \"public\".\"comment\" DROP CONSTRAINT \"comment_userId_videoId_key\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"comment_userId_videoId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "comment_userId_videoId_key",
+          "public",
+          "\"public\".\"comment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.commentReaction",
+    "label": "Create table \"commentReaction\"",
+    "summary": "Creates table \"commentReaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "commentReaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"commentReaction\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"commentReaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"commentReaction\"",
+        "sql": "CREATE TABLE \"public\".\"commentReaction\" (\n  \"commentId\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"type\" text NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"commentReaction\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"commentReaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.comment.parentId",
+    "label": "Add column \"parentId\" to \"comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "parentId",
+        "table": "comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"parentId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "comment",
+          "parentId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"parentId\"",
+        "sql": "ALTER TABLE \"public\".\"comment\" ADD COLUMN \"parentId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"parentId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "comment",
+          "parentId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.commentReaction.commentReaction_userId_commentId_key",
+    "label": "Add unique constraint on \"commentReaction\" (userId, commentId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "commentReaction_userId_commentId_key",
+        "table": "commentReaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"commentReaction_userId_commentId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "commentReaction_userId_commentId_key",
+          "public",
+          "\"public\".\"commentReaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"commentReaction_userId_commentId_key\"",
+        "sql": "ALTER TABLE \"public\".\"commentReaction\" ADD CONSTRAINT \"commentReaction_userId_commentId_key\" UNIQUE (\"userId\", \"commentId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"commentReaction_userId_commentId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "commentReaction_userId_commentId_key",
+          "public",
+          "\"public\".\"commentReaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.comment.comment_parentId_idx_6a68f597",
+    "label": "Create index \"comment_parentId_idx_6a68f597\" on \"comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "comment_parentId_idx_6a68f597",
+        "table": "comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"comment_parentId_idx_6a68f597\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"comment_parentId_idx_6a68f597\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"comment_parentId_idx_6a68f597\"",
+        "sql": "CREATE INDEX \"comment_parentId_idx_6a68f597\" ON \"public\".\"comment\" (\"parentId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"comment_parentId_idx_6a68f597\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"comment_parentId_idx_6a68f597\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.comment.comment_videoId_createdAt_idx_5df18d5b",
+    "label": "Create index \"comment_videoId_createdAt_idx_5df18d5b\" on \"comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "comment_videoId_createdAt_idx_5df18d5b",
+        "table": "comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"comment_videoId_createdAt_idx_5df18d5b\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"comment_videoId_createdAt_idx_5df18d5b\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"comment_videoId_createdAt_idx_5df18d5b\"",
+        "sql": "CREATE INDEX \"comment_videoId_createdAt_idx_5df18d5b\" ON \"public\".\"comment\" (\"videoId\", \"createdAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"comment_videoId_createdAt_idx_5df18d5b\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"comment_videoId_createdAt_idx_5df18d5b\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.commentReaction.commentReaction_commentId_idx_b5a4f615",
+    "label": "Create index \"commentReaction_commentId_idx_b5a4f615\" on \"commentReaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "commentReaction_commentId_idx_b5a4f615",
+        "table": "commentReaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"commentReaction_commentId_idx_b5a4f615\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"commentReaction_commentId_idx_b5a4f615\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"commentReaction_commentId_idx_b5a4f615\"",
+        "sql": "CREATE INDEX \"commentReaction_commentId_idx_b5a4f615\" ON \"public\".\"commentReaction\" (\"commentId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"commentReaction_commentId_idx_b5a4f615\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"commentReaction_commentId_idx_b5a4f615\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.commentReaction.commentReaction_userId_idx_a489d58a",
+    "label": "Create index \"commentReaction_userId_idx_a489d58a\" on \"commentReaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "commentReaction_userId_idx_a489d58a",
+        "table": "commentReaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"commentReaction_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"commentReaction_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"commentReaction_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"commentReaction_userId_idx_a489d58a\" ON \"public\".\"commentReaction\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"commentReaction_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"commentReaction_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.comment.comment_parentId_fkey",
+    "label": "Add foreign key \"comment_parentId_fkey\" on \"comment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "comment_parentId_fkey",
+        "table": "comment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"comment_parentId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "comment_parentId_fkey",
+          "public",
+          "\"public\".\"comment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"comment_parentId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"comment\"\nADD CONSTRAINT \"comment_parentId_fkey\"\nFOREIGN KEY (\"parentId\")\nREFERENCES \"public\".\"comment\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"comment_parentId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "comment_parentId_fkey",
+          "public",
+          "\"public\".\"comment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.commentReaction.commentReaction_userId_fkey",
+    "label": "Add foreign key \"commentReaction_userId_fkey\" on \"commentReaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "commentReaction_userId_fkey",
+        "table": "commentReaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"commentReaction_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "commentReaction_userId_fkey",
+          "public",
+          "\"public\".\"commentReaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"commentReaction_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"commentReaction\"\nADD CONSTRAINT \"commentReaction_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"commentReaction_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "commentReaction_userId_fkey",
+          "public",
+          "\"public\".\"commentReaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.commentReaction.commentReaction_commentId_fkey",
+    "label": "Add foreign key \"commentReaction_commentId_fkey\" on \"commentReaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "commentReaction_commentId_fkey",
+        "table": "commentReaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"commentReaction_commentId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "commentReaction_commentId_fkey",
+          "public",
+          "\"public\".\"commentReaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"commentReaction_commentId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"commentReaction\"\nADD CONSTRAINT \"commentReaction_commentId_fkey\"\nFOREIGN KEY (\"commentId\")\nREFERENCES \"public\".\"comment\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"commentReaction_commentId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "commentReaction_commentId_fkey",
+          "public",
+          "\"public\".\"commentReaction\""
+        ]
+      }
+    ]
+  }
+]

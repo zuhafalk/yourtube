@@ -1,4 +1,5 @@
 // use prisma-8
+
 model User {
   id            String               @id @default(uuid())
   name          String?
@@ -11,24 +12,28 @@ model User {
   videos        Video[]
   likes         Like[]
   comments      Comment[]
+  commentReactions CommentReaction[]
   subscriptions Subscription[]       @relation("UserSubscriptions")
   subscribers   Subscription[]       @relation("ChannelSubscribers")
   watchHistory  WatchHistory[]
   watchLater    WatchLater[]
+  downloads     Download[]
+
+  plan          UserPlan?
 }
 
 model Video {
-  id           String               @id @default(uuid())
+  id           String   @id @default(uuid())
   title        String
   description  String?
   thumbnail    String?
   videoUrl     String?
   category     String?
-  views        Int                  @default(0)
-  createdAt    DateTime             @default(now())
-  updatedAt   temporal.updatedAt()
+  views        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    temporal.updatedAt()
 
-  uploader     User                 @relation(fields:[uploaderId], references:[id])
+  uploader     User     @relation(fields:[uploaderId], references:[id])
   uploaderId   String
 
   frames       VideoFrame[]
@@ -36,6 +41,7 @@ model Video {
   comments     Comment[]
   watchHistory WatchHistory[]
   watchLater   WatchLater[]
+  downloads    Download[]
 }
 
 model VideoFrame {
@@ -65,16 +71,42 @@ model Like {
 }
 
 model Comment {
-  id        String               @id @default(uuid())
+  id        String   @id @default(uuid())
   text      String
-  createdAt DateTime             @default(now())
+  createdAt DateTime @default(now())
   updatedAt temporal.updatedAtString()
 
-  user      User                 @relation(fields:[userId], references:[id], onDelete: Cascade)
+  user      User     @relation(fields:[userId], references:[id], onDelete: Cascade)
   userId    String
 
-  video     Video                @relation(fields:[videoId], references:[id], onDelete: Cascade)
+  video     Video    @relation(fields:[videoId], references:[id], onDelete: Cascade)
   videoId   String
+
+  parent    Comment?  @relation("CommentReplies", fields:[parentId], references:[id], onDelete: Cascade)
+  parentId  String?
+
+  replies   Comment[] @relation("CommentReplies")
+
+  reactions CommentReaction[]
+
+  @@index([videoId, createdAt])
+  @@index([parentId])
+  @@index([userId])
+}
+
+model CommentReaction {
+  id        String   @id @default(uuid())
+  type      String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  userId    String
+
+  comment   Comment  @relation(fields:[commentId], references:[id], onDelete: Cascade)
+  commentId String
+
+  @@unique([userId, commentId])
+  @@index([commentId])
 }
 
 model Subscription {
@@ -114,4 +146,85 @@ model WatchLater {
   videoId   String
 
   @@unique([userId, videoId])
+}
+
+model UserPlan {
+  id        String   @id @default(uuid())
+
+  user      User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  userId    String   @unique
+
+  plan      String   @default("FREE")
+  status    String   @default("ACTIVE")
+
+  startDate   DateTime  @default(now())
+  expiryDate  DateTime?
+  renewalDate DateTime?
+
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature  String?
+
+  amount   Int?
+  currency String? @default("INR")
+
+  createdAt DateTime             @default(now())
+  updatedAt temporal.updatedAt()
+}
+
+model Download {
+  id        String   @id @default(uuid())
+
+  user      User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  userId    String
+
+  video     Video    @relation(fields:[videoId], references:[id], onDelete: Cascade)
+  videoId   String
+
+  downloadedAt DateTime @default(now())
+
+  status String @default("COMPLETED")
+
+  plan String @default("FREE")
+
+  fileName String?
+  fileSize Int?
+  fileUrl  String?
+
+  ipAddress   String?
+  deviceType  String?
+  deviceModel String?
+  browser     String?
+  userAgent   String?
+
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt temporal.updatedAt()
+
+  @@index([userId, downloadedAt])
+  @@index([videoId, downloadedAt])
+  @@index([userId, videoId])
+}
+
+model CommentReport {
+  id        String   @id @default(uuid())
+
+  comment   Comment  @relation(fields:[commentId], references:[id], onDelete: Cascade)
+  commentId String
+
+  reporter   User   @relation(fields:[reporterId], references:[id], onDelete: Cascade)
+  reporterId String
+
+  reason      String
+  description String?
+
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt temporal.updatedAt()
+
+  @@index([commentId])
+  @@index([reporterId])
+  @@index([status])
+  @@unique([commentId, reporterId])
 }
