@@ -1,3 +1,4 @@
+
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
@@ -5,54 +6,65 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
+    const thumbnailFile = formData.get("thumbnail");
 
     if (!(file instanceof File)) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "No video file provided.",
-        },
+        { success: false, message: "No video file provided." },
         { status: 400 }
       );
     }
 
     if (!file.type.startsWith("video/")) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Only video files are allowed.",
-        },
+        { success: false, message: "Only video files are allowed." },
         { status: 400 }
       );
     }
 
-    console.log("Starting Vercel Blob upload...");
-    console.log("File:", file.name);
-    console.log("Size:", file.size);
-    console.log("Type:", file.type);
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const timestamp = Date.now();
 
-    const safeFileName = file.name.replace(
-      /[^a-zA-Z0-9.-]/g,
-      "_"
-    );
-
-    const blob = await put(
-      `videos/${Date.now()}-${safeFileName}`,
+    const videoBlob = await put(
+      `videos/${timestamp}-${safeFileName}`,
       file,
       {
         access: "public",
         multipart: true,
-        token: process.env.BLOB_READ_WRITE_TOKEN,
+        token: process.env.videos_READ_WRITE_TOKEN,
       }
     );
 
-    console.log("Vercel Blob upload successful.");
-    console.log("Blob URL:", blob.url);
+    let thumbnailUrl: string | null = null;
+
+    if (thumbnailFile instanceof File && thumbnailFile.size > 0) {
+      if (thumbnailFile.type !== "image/jpeg") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Thumbnail must be a JPEG image.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const thumbnailBlob = await put(
+        `thumbnails/${timestamp}-${safeFileName}.jpg`,
+        thumbnailFile,
+        {
+          access: "public",
+          token: process.env.videos_READ_WRITE_TOKEN,
+        }
+      );
+
+      thumbnailUrl = thumbnailBlob.url;
+    }
 
     return NextResponse.json({
       success: true,
-      videoUrl: blob.url,
-      pathname: blob.pathname,
+      videoUrl: videoBlob.url,
+      thumbnailUrl,
+      pathname: videoBlob.pathname,
       message: "Video uploaded successfully.",
     });
   } catch (error) {

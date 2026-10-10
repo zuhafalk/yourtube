@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { hashPassword } from "@/lib/password";
 
 export async function POST(request: Request) {
   try {
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     const user = await db.orm.public.User.create({
       name,
       email,
-      password,
+      password: await hashPassword(password),
     });
 
     const response = NextResponse.json({

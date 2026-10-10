@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { hashPassword, verifyPassword } from "@/lib/password";
 
 export async function POST(request: Request) {
   try {
@@ -22,7 +23,11 @@ export async function POST(request: Request) {
       .where({ email })
       .first();
 
-    if (!user || user.password !== password) {
+    const result = user
+      ? await verifyPassword(password, user.password)
+      : { valid: false, needsUpgrade: false };
+
+    if (!user || !result.valid) {
       return NextResponse.json(
         {
           success: false,
@@ -30,6 +35,16 @@ export async function POST(request: Request) {
         },
         { status: 401 }
       );
+    }
+
+    if (result.needsUpgrade) {
+      try {
+        await db.orm.public.User
+          .where({ id: user.id })
+          .update({ password: await hashPassword(password) });
+      } catch (upgradeError) {
+        console.error("Password upgrade failed:", upgradeError);
+      }
     }
 
     const response = NextResponse.json({

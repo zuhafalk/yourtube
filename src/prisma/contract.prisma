@@ -1,4 +1,17 @@
 // use prisma-8
+model PasswordResetToken {
+  id          String   @id @default(uuid())
+
+  user        User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  userId      String
+
+  tokenHash   String   @unique
+  expiresAtMs String
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("passwordResetToken")
+}
 
 model User {
   id            String               @id @default(uuid())
@@ -20,6 +33,8 @@ model User {
   downloads     Download[]
 
   plan          UserPlan?
+
+  @@map("user")
 }
 
 model Video {
@@ -27,6 +42,7 @@ model Video {
   title        String
   description  String?
   thumbnail    String?
+  isShort      Boolean  @default(false)
   videoUrl     String?
   category     String?
   views        Int      @default(0)
@@ -42,6 +58,8 @@ model Video {
   watchHistory WatchHistory[]
   watchLater   WatchLater[]
   downloads    Download[]
+
+  @@map("video")
 }
 
 model VideoFrame {
@@ -55,6 +73,7 @@ model VideoFrame {
   videoId   String
 
   @@unique([videoId, order])
+  @@map("videoFrame")
 }
 
 model Like {
@@ -68,6 +87,7 @@ model Like {
   videoId   String
 
   @@unique([userId, videoId])
+  @@map("like")
 }
 
 model Comment {
@@ -92,6 +112,7 @@ model Comment {
   @@index([videoId, createdAt])
   @@index([parentId])
   @@index([userId])
+  @@map("comment")
 }
 
 model CommentReaction {
@@ -107,6 +128,7 @@ model CommentReaction {
 
   @@unique([userId, commentId])
   @@index([commentId])
+  @@map("commentReaction")
 }
 
 model Subscription {
@@ -120,6 +142,7 @@ model Subscription {
   channelId    String
 
   @@unique([subscriberId, channelId])
+  @@map("subscription")
 }
 
 model WatchHistory {
@@ -133,6 +156,7 @@ model WatchHistory {
   videoId   String
 
   @@unique([userId, videoId])
+  @@map("watchHistory")
 }
 
 model WatchLater {
@@ -146,6 +170,7 @@ model WatchLater {
   videoId   String
 
   @@unique([userId, videoId])
+  @@map("watchLater")
 }
 
 model UserPlan {
@@ -170,6 +195,8 @@ model UserPlan {
 
   createdAt DateTime             @default(now())
   updatedAt temporal.updatedAt()
+
+  @@map("userPlan")
 }
 
 model Download {
@@ -205,6 +232,7 @@ model Download {
   @@index([userId, downloadedAt])
   @@index([videoId, downloadedAt])
   @@index([userId, videoId])
+  @@map("download")
 }
 
 model CommentReport {
@@ -227,4 +255,5 @@ model CommentReport {
   @@index([reporterId])
   @@index([status])
   @@unique([commentId, reporterId])
+  @@map("commentReport")
 }

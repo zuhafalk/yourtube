@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
+  ArrowLeft,
   ThumbsUp,
   ThumbsDown,
   MessageCircle,
@@ -93,6 +94,7 @@ export default function WatchPage() {
 }
 
 function WatchContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const videoId = searchParams.get("id");
 
@@ -1287,6 +1289,24 @@ function WatchContent() {
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-8">
+
+                {/* Back Button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/");
+            }
+          }}
+          aria-label="Go back to previous page"
+          title="Go back"
+          className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-800 shadow-sm transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+
 
         {/* Video Player */}
         <div className="bg-black rounded-xl overflow-hidden">

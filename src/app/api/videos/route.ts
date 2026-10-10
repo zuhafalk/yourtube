@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const type = new URL(request.url).searchParams.get("type");
+
     const videos = await db.orm.public.Video.all();
+
+    const result =
+      type === "short"
+        ? videos.filter((video) => video.isShort === true)
+        : type === "video"
+        ? videos.filter((video) => !video.isShort)
+        : videos;
 
     return NextResponse.json({
       success: true,
-      videos,
+      videos: result,
     });
   } catch (error) {
     console.error("Videos GET error:", error);
@@ -33,6 +42,7 @@ export async function POST(request: Request) {
       videoUrl,
       category,
       uploaderId,
+      isShort,
     } = body;
 
     if (!title || !uploaderId) {
@@ -49,8 +59,9 @@ export async function POST(request: Request) {
       title,
       description: description ?? null,
       thumbnail: thumbnail ?? null,
-       videoUrl: videoUrl ?? null,
+      videoUrl: videoUrl ?? null,
       category: category ?? null,
+      isShort: isShort === true,
       uploaderId,
     });
 

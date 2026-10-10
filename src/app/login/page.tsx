@@ -82,6 +82,15 @@ export default function LoginPage() {
             className="w-full h-12 px-4 border rounded-lg outline-none focus:border-blue-500"
           />
 
+          <div className="flex justify-end -mt-1">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-red-600 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
           {message && (
             <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
               {message}
@@ -94,7 +103,6 @@ export default function LoginPage() {
             className="w-full h-12 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <LogIn size={19} />
-
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>

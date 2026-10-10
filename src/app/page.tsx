@@ -63,10 +63,14 @@ export default function HomePage() {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
+  // Mobile drawer (phones) and desktop sidebar (computers)
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   useEffect(() => {
     async function loadVideos() {
       try {
-        const response = await fetch("/api/videos");
+        const response = await fetch("/api/videos?type=video");
 
         if (!response.ok) {
           throw new Error("Failed to fetch videos");
@@ -113,6 +117,15 @@ export default function HomePage() {
 
     loadCurrentUser();
   }, []);
+
+  function handleMenuClick() {
+    // 768px is Tailwind's "md" breakpoint
+    if (window.innerWidth >= 768) {
+      setSidebarOpen((current) => !current);
+    } else {
+      setShowMobileMenu((current) => !current);
+    }
+  }
 
   async function handleLogout() {
     if (logoutLoading) {
@@ -171,6 +184,7 @@ export default function HomePage() {
         {/* Menu */}
         <button
           type="button"
+          onClick={handleMenuClick}
           className="p-2 rounded-full hover:bg-gray-100"
           aria-label="Menu"
         >
@@ -361,8 +375,26 @@ export default function HomePage() {
       {/* ================= PAGE BODY ================= */}
       <div className="flex pt-16">
         {/* ================= SIDEBAR ================= */}
-        <aside className="hidden md:block fixed left-0 top-16 bottom-0 w-60 bg-white border-r p-4">
-          <nav className="space-y-2">
+
+        {/* Dark backdrop (phones only) */}
+        {showMobileMenu && (
+          <div
+            className="md:hidden fixed inset-0 top-16 z-30 bg-black/40"
+            onClick={() => setShowMobileMenu(false)}
+          />
+        )}
+
+        <aside
+          className={`${
+            showMobileMenu ? "block" : "hidden"
+          } ${
+            sidebarOpen ? "md:block" : "md:hidden"
+          } fixed left-0 top-16 bottom-0 w-60 bg-white border-r p-4 z-40 overflow-y-auto`}
+        >
+          <nav
+            className="space-y-2"
+            onClick={() => setShowMobileMenu(false)}
+          >
             <Link
               href="/"
               className="w-full flex items-center gap-4 px-4 py-3 rounded-lg bg-gray-100 font-medium"
@@ -436,7 +468,11 @@ export default function HomePage() {
         </aside>
 
         {/* ================= MAIN CONTENT ================= */}
-        <main className="flex-1 md:ml-60 p-4 md:p-6">
+        <main
+          className={`flex-1 ${
+            sidebarOpen ? "md:ml-60" : "md:ml-0"
+          } p-4 md:p-6 min-w-0`}
+        >
           {/* Categories */}
           <div className="flex gap-3 overflow-x-auto mb-6 pb-2">
             {categories.map((category) => (

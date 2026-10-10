@@ -30,6 +30,173 @@ const CATEGORIES = [
   "Other",
 ];
 
+function waitForVideoEvent(
+  video: HTMLVideoElement,
+  eventName: "loadedmetadata" | "seeked",
+  timeoutMs = 15000
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      video.removeEventListener(eventName, onSuccess);
+      video.removeEventListener("error", onError);
+    };
+
+    const onSuccess = () => {
+      cleanup();
+      resolve();
+    };
+
+    const onError = () => {
+      cleanup();
+      reject(new Error("Could not read a video frame."));
+    };
+
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out while preparing the video thumbnail."));
+    }, timeoutMs);
+
+    video.addEventListener(eventName, onSuccess, { once: true });
+    video.addEventListener("error", onError, { once: true });
+  });
+}
+
+async function generateThumbnail(file: File): Promise<File> {
+  const objectUrl = URL.createObjectURL(file);
+  const video = document.createElement("video");
+
+  video.preload = "auto";
+  video.muted = true;
+  video.playsInline = true;
+  video.src = objectUrl;
+
+  try {
+    const metadataPromise = waitForVideoEvent(video, "loadedmetadata");
+    video.load();
+    await metadataPromise;
+
+    if (
+      !Number.isFinite(video.duration) ||
+      video.duration <= 0 ||
+      video.videoWidth <= 0 ||
+      video.videoHeight <= 0
+    ) {
+      throw new Error("This video does not contain readable frames.");
+    }
+
+    const maxWidth = 640;
+    const scale = Math.min(1, maxWidth / video.videoWidth);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+
+    const context = canvas.getContext("2d", {
+      willReadFrequently: true,
+    });
+
+    if (!context) {
+      throw new Error("Could not create the thumbnail canvas.");
+    }
+
+    const duration = video.duration;
+    const lastSafeTime = Math.max(0, duration - 0.15);
+
+    const timestamps = [
+      Math.min(duration * 0.25, lastSafeTime),
+      Math.min(duration * 0.5, lastSafeTime),
+      Math.min(duration * 0.75, lastSafeTime),
+      Math.min(duration * 0.1, lastSafeTime),
+      0,
+    ];
+
+    let bestBlob: Blob | null = null;
+    let bestBrightness = -1;
+
+    for (const timestamp of Array.from(new Set(timestamps))) {
+      try {
+        if (Math.abs(video.currentTime - timestamp) > 0.01) {
+          const seekPromise = waitForVideoEvent(video, "seeked");
+          video.currentTime = timestamp;
+          await seekPromise;
+        }
+
+        // Allow the decoded frame to become available before drawing it.
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve());
+          });
+        });
+
+        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          continue;
+        }
+
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const pixels = context.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        ).data;
+
+        // Estimate frame brightness by sampling pixels.
+        let brightnessTotal = 0;
+        let sampleCount = 0;
+        const pixelCount = canvas.width * canvas.height;
+        const pixelStep = Math.max(1, Math.floor(pixelCount / 2500));
+
+        for (let pixel = 0; pixel < pixelCount; pixel += pixelStep) {
+          const index = pixel * 4;
+          brightnessTotal +=
+            pixels[index] * 0.299 +
+            pixels[index + 1] * 0.587 +
+            pixels[index + 2] * 0.114;
+          sampleCount++;
+        }
+
+        const brightness =
+          sampleCount > 0 ? brightnessTotal / sampleCount : 0;
+
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob(resolve, "image/jpeg", 0.9);
+        });
+
+        if (blob && brightness > bestBrightness) {
+          bestBrightness = brightness;
+          bestBlob = blob;
+        }
+
+        // Prefer a frame that isn't almost completely black.
+        if (blob && brightness >= 25) {
+          return new File([blob], "thumbnail.jpg", {
+            type: "image/jpeg",
+          });
+        }
+      } catch (frameError) {
+        console.warn("Skipping an unreadable video frame:", frameError);
+      }
+    }
+
+    if (bestBlob) {
+      return new File([bestBlob], "thumbnail.jpg", {
+        type: "image/jpeg",
+      });
+    }
+
+    throw new Error(
+      "Could not generate a thumbnail. Try a different video file."
+    );
+  } finally {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export default function UploadPage() {
   const inputFileRef = useRef<HTMLInputElement>(null);
 
@@ -37,6 +204,7 @@ export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Technology");
+  const [isShort, setIsShort] = useState(false);
 
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -70,6 +238,8 @@ export default function UploadPage() {
   }
 
   function removeFile() {
+    if (uploading) return;
+
     setFile(null);
     setUploadProgress(0);
     setMessage("");
@@ -82,6 +252,8 @@ export default function UploadPage() {
   }
 
   async function handleUpload() {
+    if (uploading) return;
+
     if (!file) {
       setMessage("Please select a video first.");
       setSuccess(false);
@@ -101,14 +273,22 @@ export default function UploadPage() {
     setVideoUrl("");
 
     try {
+      setMessage("Generating a clear video thumbnail...");
+
+      const thumbnailFile = await generateThumbnail(file);
+
       const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const pathname = `videos/${Date.now()}-${safeFileName}`;
 
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("thumbnail", thumbnailFile);
       formData.append("pathname", pathname);
 
-      const blobUrl = await new Promise<string>((resolve, reject) => {
+      const uploadResult = await new Promise<{
+        videoUrl: string;
+        thumbnailUrl: string | null;
+      }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("POST", "/api/upload");
 
@@ -125,14 +305,22 @@ export default function UploadPage() {
           try {
             const data = JSON.parse(xhr.responseText);
 
-            if (xhr.status >= 200 && xhr.status < 300 && data.success) {
-              resolve(data.videoUrl);
+            if (
+              xhr.status >= 200 &&
+              xhr.status < 300 &&
+              data.success &&
+              data.videoUrl
+            ) {
+              resolve({
+                videoUrl: data.videoUrl,
+                thumbnailUrl: data.thumbnailUrl ?? null,
+              });
               return;
             }
 
-            reject(new Error(data.message || "Upload failed."));
+            reject(new Error(data.message || "Video upload failed."));
           } catch {
-            reject(new Error("Unexpected response from server."));
+            reject(new Error("Unexpected response from upload server."));
           }
         };
 
@@ -147,7 +335,10 @@ export default function UploadPage() {
         xhr.send(formData);
       });
 
+      const { videoUrl: blobUrl, thumbnailUrl } = uploadResult;
+
       setUploadProgress(95);
+      setMessage("Saving video details...");
 
       const videoResponse = await fetch("/api/videos", {
         method: "POST",
@@ -157,10 +348,11 @@ export default function UploadPage() {
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim(),
-          thumbnail: null,
+          thumbnail: thumbnailUrl,
           category,
           uploaderId: TEST_USER_ID,
           videoUrl: blobUrl,
+          isShort,
         }),
       });
 
@@ -175,11 +367,12 @@ export default function UploadPage() {
       setUploadProgress(100);
       setVideoUrl(blobUrl);
       setSuccess(true);
-      setMessage("Your video has been uploaded successfully.");
+      setMessage("Your video and thumbnail have been uploaded successfully.");
 
       setTitle("");
       setDescription("");
       setCategory("Technology");
+      setIsShort(false);
       setFile(null);
 
       if (inputFileRef.current) {
@@ -189,7 +382,6 @@ export default function UploadPage() {
       console.error("Upload error:", error);
 
       setSuccess(false);
-
       setMessage(
         error instanceof Error
           ? error.message
@@ -316,6 +508,25 @@ export default function UploadPage() {
                 ))}
               </select>
             </div>
+
+            <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <input
+                type="checkbox"
+                checked={isShort}
+                onChange={(e) => setIsShort(e.target.checked)}
+                className="mt-1 h-4 w-4 accent-red-600"
+              />
+
+              <span>
+                <span className="block text-sm font-semibold">
+                  Upload as a Short
+                </span>
+                <span className="block text-xs text-gray-500">
+                  Short videos appear in the Shorts section instead of the
+                  home page. Best for vertical videos under 60 seconds.
+                </span>
+              </span>
+            </label>
           </section>
 
           <section className="p-5 sm:p-7">
@@ -389,7 +600,9 @@ export default function UploadPage() {
                   <div className="mt-5">
                     <div className="mb-2 flex items-center justify-between text-sm">
                       <span className="font-medium text-gray-700">
-                        Uploading video...
+                        {uploadProgress === 0
+                          ? "Preparing thumbnail or upload..."
+                          : "Uploading video..."}
                       </span>
 
                       <span className="font-semibold text-red-600">
@@ -479,8 +692,8 @@ export default function UploadPage() {
               <p className="text-sm font-semibold">About video uploads</p>
 
               <p className="mt-1 text-xs leading-5 text-gray-500">
-                Your video is uploaded to Vercel Blob cloud storage through
-                the application server.
+                Your video and its thumbnail are uploaded to Vercel Blob cloud
+                storage through the application server.
               </p>
             </div>
           </div>
